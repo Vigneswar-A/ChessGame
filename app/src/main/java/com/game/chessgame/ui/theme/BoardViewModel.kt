@@ -234,8 +234,8 @@ class BoardViewModel : ViewModel() {
                 }
 
                 if(piece.color == PieceColor.BLACK
-                    && !SpecialMoveManager.whiteLeftRookMoved
-                    && !SpecialMoveManager.whiteKingMoved
+                    && !SpecialMoveManager.blackRightRookMoved
+                    && !SpecialMoveManager.blackKingMoved
                     && piecePos[0 to 1] == null
                     && piecePos[0 to 2] == null
                     && piecePos[0 to 3] == null){
@@ -243,8 +243,8 @@ class BoardViewModel : ViewModel() {
                 }
 
                 if(piece.color == PieceColor.BLACK
-                    && !SpecialMoveManager.whiteRightRookMoved
-                    && !SpecialMoveManager.whiteKingMoved
+                    && !SpecialMoveManager.blackLeftRookMoved
+                    && !SpecialMoveManager.blackKingMoved
                     && piecePos[0 to 5] == null
                     && piecePos[0 to 6] == null){
                     validMoves.add(0 to 6)
@@ -286,6 +286,7 @@ class BoardViewModel : ViewModel() {
             }
         }
     }
+
     fun onCellClicked(r: Int, c: Int){
         if(selected == null) {
             selected = piecePos[r to c]
@@ -342,7 +343,7 @@ class BoardViewModel : ViewModel() {
                 piecePos.remove(selected!!.pos)
 
                 //Pawn Promotion
-                if(r == 0 && selected!!.piece == Pieces.PAWN){
+                if((r == 0 || r == 7) && selected!!.piece == Pieces.PAWN){
                     selected!!.piece = Pieces.QUEEN
                 }
 

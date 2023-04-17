@@ -3,6 +3,7 @@ package com.game.chessgame.ui.theme
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -20,5 +21,9 @@ fun GameScreen(viewModel: BoardViewModel){
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Board(viewModel)
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = {/*TODO*/}){
+            Text(text="UNDO")
+        }
     }
 }
