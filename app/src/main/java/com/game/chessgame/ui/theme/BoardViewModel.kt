@@ -115,10 +115,12 @@ class BoardViewModel : ViewModel() {
             Pieces.PAWN -> {
                 val (currX, currY) = piece.pos
 
-                if(currX == 6 && piece.color == PieceColor.WHITE)
+                if(currX == 6 && piece.color == PieceColor.WHITE
+                    && piecePos[currX - 2 to currY] == null)
                     validMoves.add(currX-2 to currY)
 
-                if(currX == 1 && piece.color == PieceColor.BLACK)
+                if(currX == 1 && piece.color == PieceColor.BLACK
+                    && piecePos[currX + 2 to currY] == null)
                     validMoves.add(currX+2 to currY)
 
                 val x = when(piece.color){
@@ -127,7 +129,7 @@ class BoardViewModel : ViewModel() {
                 }
                 if(currX + x in 0..7
                     && currY  in 0..7
-                    && piecePos[currX + x to currY]?.color != piece.color)
+                    && piecePos[currX + x to currY] == null)
                     validMoves.add(currX+x to currY)
 
                 for(y in listOf(-1, 1))
