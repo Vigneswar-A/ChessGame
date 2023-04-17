@@ -29,5 +29,4 @@ class Piece(piece: Pieces, val color: PieceColor, pos: Pair<Int, Int>){
     var selection by mutableStateOf(PieceSelection.UNSELECTED)
     var flip by mutableStateOf(false)
     var isDead by mutableStateOf(false)
-    var isMoved = false
 }
