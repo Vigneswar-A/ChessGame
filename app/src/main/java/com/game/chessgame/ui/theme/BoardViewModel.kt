@@ -46,6 +46,15 @@ val initialArrangement = listOf(
     Piece(Pieces.PAWN, color = PieceColor.WHITE, 6 to 7),
 )
 
+object SpecialMoveManager{
+    var whiteLeftRookMoved = false
+    var whiteRightRookMoved = false
+    var blackLeftRookMoved = false
+    var blackRightRookMoved = false
+    var blackKingMoved = false
+    var whiteKingMoved = false
+}
+
 class BoardViewModel : ViewModel() {
     var pieces: MutableList<Piece> = initialArrangement.toMutableList()
     private val piecePos = HashMap<Pair<Int, Int>, Piece>()
@@ -55,7 +64,6 @@ class BoardViewModel : ViewModel() {
     private val vulnerable = mutableListOf<Piece>()
     private var currentPlayer: PieceColor = PieceColor.WHITE
     private val valid = hashSetOf<Pair<Int, Int>>()
-    private var check = false
 
     init {
         reset()
@@ -73,6 +81,28 @@ class BoardViewModel : ViewModel() {
         _uiState.update {currentState -> currentState.copy(validPos = validPos) }
     }
 
+    private fun isCheckMate(player: PieceColor = currentPlayer): Boolean{
+        val temp: Map<Pair<Int, Int>, Piece> = piecePos.toMap()
+        for((pos, piece) in temp.entries){
+            if(piece.color == player){
+                val tempValid = hashSetOf<Pair<Int, Int>>()
+                getValidMoves(piece, tempValid, mutableListOf())
+                for(newPos in tempValid){
+                    val old = piecePos[newPos]
+                    piecePos.remove(pos)
+                    piecePos[newPos] = piece
+                    if(!isCheck(player)){
+                        if(old!= null) piecePos[newPos] = old else piecePos.remove(newPos)
+                        piecePos[pos] = piece
+                        return false
+                    }
+                    if(old != null) piecePos[newPos] = old else piecePos.remove(newPos)
+                    piecePos[pos] = piece
+                }
+            }
+        }
+        return true
+    }
 
     private fun switchPlayer(){
         currentPlayer = when(currentPlayer){
@@ -116,11 +146,13 @@ class BoardViewModel : ViewModel() {
                 val (currX, currY) = piece.pos
 
                 if(currX == 6 && piece.color == PieceColor.WHITE
-                    && piecePos[currX - 2 to currY] == null)
+                    && piecePos[currX - 2 to currY] == null
+                    && piecePos[currX - 1 to currY] == null)
                     validMoves.add(currX-2 to currY)
 
                 if(currX == 1 && piece.color == PieceColor.BLACK
-                    && piecePos[currX + 2 to currY] == null)
+                    && piecePos[currX + 2 to currY] == null
+                    && piecePos[currX + 1 to currY] == null)
                     validMoves.add(currX+2 to currY)
 
                 val x = when(piece.color){
@@ -134,7 +166,7 @@ class BoardViewModel : ViewModel() {
 
                 for(y in listOf(-1, 1))
                     if(piecePos[currX + x to currY + y] != null
-                        && piecePos[currX + x to currY + y]?.color != selected?.color) {
+                        && piecePos[currX + x to currY + y]?.color != piece.color) {
                         vulnerablePieces.add(piecePos[currX + x to currY + y]!!)
                         validMoves.add(currX + x to currY + y)
                     }
@@ -182,7 +214,40 @@ class BoardViewModel : ViewModel() {
                         if (piecePos[currX + x to currY + y] != null)
                             vulnerablePieces.add(piecePos[currX + x to currY + y]!!)
                     }
+                }
 
+                if(piece.color == PieceColor.WHITE
+                    && !SpecialMoveManager.whiteLeftRookMoved
+                    && !SpecialMoveManager.whiteKingMoved
+                    && piecePos[7 to 1] == null
+                    && piecePos[7 to 2] == null
+                    && piecePos[7 to 3] == null){
+                    validMoves.add(7 to 2)
+                }
+
+                if(piece.color == PieceColor.WHITE
+                    && !SpecialMoveManager.whiteRightRookMoved
+                    && !SpecialMoveManager.whiteKingMoved
+                    && piecePos[7 to 5] == null
+                    && piecePos[7 to 6] == null){
+                    validMoves.add(7 to 6)
+                }
+
+                if(piece.color == PieceColor.BLACK
+                    && !SpecialMoveManager.whiteLeftRookMoved
+                    && !SpecialMoveManager.whiteKingMoved
+                    && piecePos[0 to 1] == null
+                    && piecePos[0 to 2] == null
+                    && piecePos[0 to 3] == null){
+                    validMoves.add(0 to 2)
+                }
+
+                if(piece.color == PieceColor.BLACK
+                    && !SpecialMoveManager.whiteRightRookMoved
+                    && !SpecialMoveManager.whiteKingMoved
+                    && piecePos[0 to 5] == null
+                    && piecePos[0 to 6] == null){
+                    validMoves.add(0 to 6)
                 }
             }
 
@@ -235,6 +300,21 @@ class BoardViewModel : ViewModel() {
             valid.clear()
             vulnerable.clear()
 
+            if(isCheck()) {
+                if (selected!!.piece == Pieces.KING
+                    && selected!!.color == PieceColor.WHITE
+                    && selected!!.pos == 7 to 4
+                ) {
+                    tempValid.remove(7 to 2)
+                    tempValid.remove(7 to 6)
+                } else if (selected!!.piece == Pieces.KING
+                    && selected!!.color == PieceColor.BLACK
+                    && selected!!.pos == 0 to 4
+                ) {
+                    tempValid.remove(0 to 2)
+                    tempValid.remove(0 to 6)
+                }
+            }
             // verify if move would cause a check
             for(pos in tempValid){
                 val temp = piecePos[pos]
@@ -265,9 +345,47 @@ class BoardViewModel : ViewModel() {
                 if(r == 0 && selected!!.piece == Pieces.PAWN){
                     selected!!.piece = Pieces.QUEEN
                 }
+
+                // castling
+                for(x in listOf(0, 7)){
+                    if(selected!!.piece == Pieces.KING
+                        && selected!!.pos == x to 4){
+                        if(r to c == x to 2)
+                        {
+                            piecePos[x to 3] = piecePos[x to 0]!!
+                            piecePos.remove(x to 0)
+                            piecePos[x to 3]!!.pos = x to 3
+                        }
+                        else if(r to c == x to 6){
+                            piecePos[x to 5] = piecePos[x to 7]!!
+                            piecePos.remove(x to 7)
+                            piecePos[x to 5]!!.pos = x to 5
+                        }
+                    }
+                }
+
                 selected!!.pos = r to c
                 piecePos[r to c] = selected!!
+
+                if(selected!!.piece == Pieces.ROOK)
+                    when(selected!!.pos) {
+                        7 to 0 -> SpecialMoveManager.whiteLeftRookMoved = true
+                        7 to 7 -> SpecialMoveManager.whiteRightRookMoved = true
+                        0 to 7 -> SpecialMoveManager.blackLeftRookMoved = true
+                        0 to 0 -> SpecialMoveManager.blackRightRookMoved = true
+                    }
+                else if(selected!!.piece == Pieces.KING)
+                    when(selected!!.pos){
+                        7 to 4 -> SpecialMoveManager.whiteKingMoved = true
+                        0 to 4 -> SpecialMoveManager.blackKingMoved = true
+                    }
+
+
                 switchPlayer()
+                if(isCheckMate()) {
+                    println("Game Over")
+                    // TODO
+                }
             }
             updateValid()
             selected!!.selection = PieceSelection.UNSELECTED
