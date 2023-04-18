@@ -19,7 +19,7 @@ fun GameScreen(viewModel: BoardViewModel){
     ) {
         Board(viewModel)
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = {/*TODO*/}){
+        Button(onClick = {viewModel.undo()}){
             Text(text="UNDO")
         }
     }

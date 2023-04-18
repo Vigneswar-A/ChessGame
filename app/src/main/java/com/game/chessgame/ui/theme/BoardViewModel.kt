@@ -55,6 +55,22 @@ object SpecialMoveManager{
     var whiteKingMoved = false
 }
 
+data class PieceState(
+    val piece: Pieces,
+    val pos: Pair<Int, Int>,
+    val isDead: Boolean
+)
+
+data class GameState(
+    val piecesState: Map<Piece, PieceState>,
+    val whiteLeftRookMoved: Boolean,
+    val whiteRightRookMoved: Boolean,
+    val blackLeftRookMoved: Boolean,
+    val blackRightRookMoved: Boolean,
+    val blackKingMoved: Boolean,
+    val whiteKingMoved: Boolean
+)
+
 class BoardViewModel : ViewModel() {
     var pieces: MutableList<Piece> = initialArrangement.toMutableList()
     private val piecePos = HashMap<Pair<Int, Int>, Piece>()
@@ -64,9 +80,27 @@ class BoardViewModel : ViewModel() {
     private val vulnerable = mutableListOf<Piece>()
     private var currentPlayer: PieceColor = PieceColor.WHITE
     private val valid = hashSetOf<Pair<Int, Int>>()
+    private var gameOver = false
+    private val stack = mutableListOf<GameState>()
 
     init {
         reset()
+    }
+
+    private fun getState() : GameState{
+        val state = mutableMapOf<Piece, PieceState>()
+        for(piece in pieces){
+            state[piece] = PieceState(piece.piece, piece.pos, piece.isDead)
+        }
+        return GameState(
+            state,
+            SpecialMoveManager.whiteLeftRookMoved,
+            SpecialMoveManager.whiteRightRookMoved,
+            SpecialMoveManager.blackLeftRookMoved,
+            SpecialMoveManager.blackRightRookMoved,
+            SpecialMoveManager.blackKingMoved,
+            SpecialMoveManager.whiteKingMoved
+        )
     }
 
     private fun reset() {
@@ -75,6 +109,32 @@ class BoardViewModel : ViewModel() {
             piecePos[piece.pos] = piece
         }
         currentPlayer = PieceColor.WHITE
+        gameOver = false
+    }
+
+    fun undo(){
+        if(stack.isEmpty()) return
+        gameOver = false
+        val gameState = stack.removeLast()
+        val state = gameState.piecesState
+        SpecialMoveManager.whiteKingMoved = gameState.whiteKingMoved
+        SpecialMoveManager.whiteLeftRookMoved = gameState.whiteLeftRookMoved
+        SpecialMoveManager.whiteRightRookMoved = gameState.whiteRightRookMoved
+        SpecialMoveManager.blackKingMoved = gameState.blackKingMoved
+        SpecialMoveManager.blackRightRookMoved= gameState.blackLeftRookMoved
+        SpecialMoveManager.blackLeftRookMoved= gameState.blackRightRookMoved
+        piecePos.clear()
+        for(piece in pieces){
+            val pieceState = state[piece]
+            piece.piece = pieceState!!.piece
+            piece.pos = pieceState.pos
+            piece.isDead = pieceState.isDead
+            piecePos[piece.pos] = piece
+            piece.selection = PieceSelection.UNSELECTED
+        }
+        switchPlayer()
+        vulnerable.clear()
+        updateValid()
     }
 
     private fun updateValid(validPos: HashSet<Pair<Int, Int>> = hashSetOf()){
@@ -288,13 +348,14 @@ class BoardViewModel : ViewModel() {
     }
 
     fun onCellClicked(r: Int, c: Int){
+        if(gameOver)
+            return
         if(selected == null) {
             selected = piecePos[r to c]
             if (selected == null || selected!!.color != currentPlayer) {
                 selected = null
                 return
             }
-
             selected!!.selection = PieceSelection.SELECTED
             val tempValid = hashSetOf<Pair<Int, Int>>()
             getValidMoves(selected!!, tempValid)
@@ -339,6 +400,7 @@ class BoardViewModel : ViewModel() {
         }
         else {
             if(uiState.value.validPos.contains(r to c)) {
+                stack.add(getState())
                 piecePos[r to c]?.isDead = true
                 piecePos.remove(selected!!.pos)
 
@@ -384,6 +446,13 @@ class BoardViewModel : ViewModel() {
 
                 switchPlayer()
                 if(isCheckMate()) {
+                    for(piece in pieces){
+                        if(piece.piece == Pieces.KING && piece.color == currentPlayer){
+                            piece.selection = PieceSelection.VULNERABLE
+                            break
+                        }
+                    }
+                    gameOver = true
                     println("Game Over")
                     // TODO
                 }
