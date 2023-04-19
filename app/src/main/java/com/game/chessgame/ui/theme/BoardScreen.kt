@@ -50,7 +50,7 @@ fun BoardBackground(viewModel: BoardViewModel) {
                 for (j in 0..7) {
                     Box(modifier = Modifier
                         .size((BOARD_SIZE / 8).dp)
-                        .background(if ((i + j) % 2 == 0) chessBlack else chessWhite)
+                        .background(if ((i + j) % 2 == 1) chessBlack else chessWhite)
                         .clickable { viewModel.onCellClicked(i, j) }
                     )
                     }
@@ -69,6 +69,10 @@ fun ValidMoves(viewModel: BoardViewModel){
         ){
             drawCircle(
                 color = chessValid,
+                radius = 6.dp.toPx(),
+            )
+            drawCircle(
+                color = chessValidInner,
                 radius = 4.dp.toPx(),
             )
         }

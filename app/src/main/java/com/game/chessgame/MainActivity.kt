@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.game.chessgame.ui.theme.BoardViewModel
 import com.game.chessgame.ui.theme.GameScreen
+import com.game.chessgame.ui.theme.MainMenu
 
 val model = BoardViewModel()
 

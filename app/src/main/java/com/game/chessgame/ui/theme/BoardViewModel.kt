@@ -1,9 +1,14 @@
 package com.game.chessgame.ui.theme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.lifecycle.ViewModel
 import com.game.chessgame.data.Piece
 import com.game.chessgame.data.PieceColor
 import com.game.chessgame.data.PieceSelection
 import com.game.chessgame.data.Pieces
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -78,10 +83,17 @@ class BoardViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(BoardUiState(hashSetOf()))
     val uiState = _uiState.asStateFlow()
     private val vulnerable = mutableListOf<Piece>()
-    private var currentPlayer: PieceColor = PieceColor.WHITE
+    private var currentPlayer by mutableStateOf(PieceColor.WHITE)
     private val valid = hashSetOf<Pair<Int, Int>>()
-    private var gameOver = false
+    private var gameOver by mutableStateOf(false)
     private val stack = mutableListOf<GameState>()
+    var totalTime by mutableStateOf(12f)
+    var undoEnabled by mutableStateOf(false)
+    var whiteTime by mutableStateOf(0)
+    var blackTime by mutableStateOf(0)
+    private val timerScope = CoroutineScope(AndroidUiDispatcher.Main)
+    private val initialState = getState()
+    private var timerJob: Job? = null
 
     init {
         reset()
@@ -103,13 +115,59 @@ class BoardViewModel : ViewModel() {
         )
     }
 
-    private fun reset() {
-        pieces = initialArrangement.toMutableList()
+    private suspend fun timer(){
+        delay(1000)
+        while(!gameOver) {
+            if (currentPlayer == PieceColor.WHITE)
+                whiteTime--
+            else
+                blackTime--
+            if (whiteTime <= 0 || blackTime <= 0) {
+                gameOver = true
+                if (whiteTime <= 0){
+                    for (piece in pieces)
+                        if (piece.piece == Pieces.KING && piece.color == PieceColor.WHITE)
+                            piece.selection = PieceSelection.VULNERABLE
+                }
+                else {
+                    for (piece in pieces)
+                        if (piece.piece == Pieces.KING && piece.color == PieceColor.BLACK)
+                            piece.selection = PieceSelection.VULNERABLE
+                }
+            }
+            delay(1000)
+        }
+    }
+
+    fun reset() {
+        timerJob?.cancel()
+        gameOver = false
+        val gameState = initialState.copy()
+        val state = gameState.piecesState
+        SpecialMoveManager.whiteKingMoved = gameState.whiteKingMoved
+        SpecialMoveManager.whiteLeftRookMoved = gameState.whiteLeftRookMoved
+        SpecialMoveManager.whiteRightRookMoved = gameState.whiteRightRookMoved
+        SpecialMoveManager.blackKingMoved = gameState.blackKingMoved
+        SpecialMoveManager.blackRightRookMoved= gameState.blackLeftRookMoved
+        SpecialMoveManager.blackLeftRookMoved= gameState.blackRightRookMoved
+        piecePos.clear()
         for(piece in pieces){
-            piecePos[piece.pos] = piece
+            val pieceState = state[piece]
+            piece.piece = pieceState!!.piece
+            piece.pos = pieceState.pos
+            piece.isDead = pieceState.isDead
+            if(!piece.isDead)  piecePos[piece.pos] = piece
+            piece.selection = PieceSelection.UNSELECTED
         }
         currentPlayer = PieceColor.WHITE
-        gameOver = false
+        vulnerable.clear()
+        updateValid()
+        whiteTime = totalTime.toInt()*60
+        blackTime = totalTime.toInt()*60
+
+        timerJob = timerScope.launch{
+            timer()
+        }
     }
 
     fun undo(){
@@ -129,13 +187,16 @@ class BoardViewModel : ViewModel() {
             piece.piece = pieceState!!.piece
             piece.pos = pieceState.pos
             piece.isDead = pieceState.isDead
-            piecePos[piece.pos] = piece
+            if(!piece.isDead)  piecePos[piece.pos] = piece
             piece.selection = PieceSelection.UNSELECTED
         }
         switchPlayer()
         vulnerable.clear()
         updateValid()
+        if(stack.isEmpty())
+            undoEnabled = false
     }
+
 
     private fun updateValid(validPos: HashSet<Pair<Int, Int>> = hashSetOf()){
         _uiState.update {currentState -> currentState.copy(validPos = validPos) }
@@ -401,6 +462,7 @@ class BoardViewModel : ViewModel() {
         else {
             if(uiState.value.validPos.contains(r to c)) {
                 stack.add(getState())
+                if (!undoEnabled) undoEnabled = true
                 piecePos[r to c]?.isDead = true
                 piecePos.remove(selected!!.pos)
 
@@ -443,12 +505,12 @@ class BoardViewModel : ViewModel() {
                         0 to 4 -> SpecialMoveManager.blackKingMoved = true
                     }
 
-
                 switchPlayer()
                 if(isCheckMate()) {
-                    for(piece in pieces){
-                        if(piece.piece == Pieces.KING && piece.color == currentPlayer){
-                            piece.selection = PieceSelection.VULNERABLE
+                    for(piece in pieces) {
+                        if (piece.piece == Pieces.KING && piece.color == currentPlayer) {
+                            piece.selection = if(isCheck()) PieceSelection.VULNERABLE
+                                                else PieceSelection.SELECTED
                             break
                         }
                     }
