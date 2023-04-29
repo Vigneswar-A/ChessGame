@@ -1,9 +1,12 @@
 package com.game.chessgame.ui.theme
+import android.media.MediaPlayer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.AndroidUiDispatcher
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
+import com.game.chessgame.R
 import com.game.chessgame.data.Piece
 import com.game.chessgame.data.PieceColor
 import com.game.chessgame.data.PieceSelection
@@ -73,7 +76,9 @@ data class GameState(
     val blackLeftRookMoved: Boolean,
     val blackRightRookMoved: Boolean,
     val blackKingMoved: Boolean,
-    val whiteKingMoved: Boolean
+    val whiteKingMoved: Boolean,
+    val currWhiteTime: Int,
+    val currBlackTime: Int
 )
 
 class BoardViewModel : ViewModel() {
@@ -85,15 +90,16 @@ class BoardViewModel : ViewModel() {
     private val vulnerable = mutableListOf<Piece>()
     private var currentPlayer by mutableStateOf(PieceColor.WHITE)
     private val valid = hashSetOf<Pair<Int, Int>>()
-    private var gameOver by mutableStateOf(false)
+    var gameOver by mutableStateOf(false)
     private val stack = mutableListOf<GameState>()
-    var totalTime by mutableStateOf(12f)
+    var totalTime by mutableStateOf(4f)
     var undoEnabled by mutableStateOf(false)
     var whiteTime by mutableStateOf(0)
     var blackTime by mutableStateOf(0)
     private val timerScope = CoroutineScope(AndroidUiDispatcher.Main)
     private val initialState = getState()
     private var timerJob: Job? = null
+
 
     init {
         reset()
@@ -111,7 +117,9 @@ class BoardViewModel : ViewModel() {
             SpecialMoveManager.blackLeftRookMoved,
             SpecialMoveManager.blackRightRookMoved,
             SpecialMoveManager.blackKingMoved,
-            SpecialMoveManager.whiteKingMoved
+            SpecialMoveManager.whiteKingMoved,
+            whiteTime,
+            blackTime
         )
     }
 
@@ -162,8 +170,8 @@ class BoardViewModel : ViewModel() {
         currentPlayer = PieceColor.WHITE
         vulnerable.clear()
         updateValid()
-        whiteTime = totalTime.toInt()*60
-        blackTime = totalTime.toInt()*60
+        whiteTime = totalTime.toInt()*300
+        blackTime = totalTime.toInt()*300
 
         timerJob = timerScope.launch{
             timer()
@@ -195,6 +203,8 @@ class BoardViewModel : ViewModel() {
         updateValid()
         if(stack.isEmpty())
             undoEnabled = false
+        whiteTime = gameState.currWhiteTime
+        blackTime = gameState.currBlackTime
     }
 
 

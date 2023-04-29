@@ -13,18 +13,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun MainMenu(viewModel: BoardViewModel){
+fun MainMenu(viewModel: BoardViewModel, gameTrigger: () -> Unit = {}){
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(108.dp))
+        Text(
+            text = "Chess Game",
+            style = Typography.h3,
+            color = buttonBackGround
+        )
+        Spacer(modifier = Modifier.height(108.dp))
         Button(
-            onClick = {},
+            onClick = {
+                gameTrigger()
+                viewModel.reset() },
             shape = RoundedCornerShape(size = 15.dp),
             modifier = Modifier
-                .height(44.dp)
-                .width(154.dp),
+                .width(250.dp)
+                .height(54.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = buttonBackGround),
         ) {
             Text(text = "Play")
@@ -49,7 +58,7 @@ fun MainMenu(viewModel: BoardViewModel){
                 modifier = Modifier
                     .width(100.dp)
                     .height(24.dp),
-                valueRange = 0f..12f,
+                valueRange = 1f..12f,
                 onValueChange = { viewModel.totalTime = it },
                 steps = 12
             )
