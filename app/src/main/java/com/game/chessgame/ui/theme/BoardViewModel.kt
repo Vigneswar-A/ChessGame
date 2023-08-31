@@ -1,12 +1,9 @@
 package com.game.chessgame.ui.theme
-import android.media.MediaPlayer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.AndroidUiDispatcher
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
-import com.game.chessgame.R
 import com.game.chessgame.data.Piece
 import com.game.chessgame.data.PieceColor
 import com.game.chessgame.data.PieceSelection
@@ -90,7 +87,7 @@ class BoardViewModel : ViewModel() {
     private val vulnerable = mutableListOf<Piece>()
     private var currentPlayer by mutableStateOf(PieceColor.WHITE)
     private val valid = hashSetOf<Pair<Int, Int>>()
-    var gameOver by mutableStateOf(false)
+    private var gameOver by mutableStateOf(false)
     private val stack = mutableListOf<GameState>()
     var totalTime by mutableStateOf(4f)
     var undoEnabled by mutableStateOf(false)
@@ -499,9 +496,6 @@ class BoardViewModel : ViewModel() {
                     }
                 }
 
-                selected!!.pos = r to c
-                piecePos[r to c] = selected!!
-
                 if(selected!!.piece == Pieces.ROOK)
                     when(selected!!.pos) {
                         7 to 0 -> SpecialMoveManager.whiteLeftRookMoved = true
@@ -514,6 +508,9 @@ class BoardViewModel : ViewModel() {
                         7 to 4 -> SpecialMoveManager.whiteKingMoved = true
                         0 to 4 -> SpecialMoveManager.blackKingMoved = true
                     }
+
+                selected!!.pos = r to c
+                piecePos[r to c] = selected!!
 
                 switchPlayer()
                 if(isCheckMate()) {
