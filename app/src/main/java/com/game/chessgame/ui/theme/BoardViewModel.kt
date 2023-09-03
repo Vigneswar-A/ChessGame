@@ -523,7 +523,6 @@ class BoardViewModel : ViewModel() {
                     }
                     gameOver = true
                     println("Game Over")
-                    // TODO
                 }
             }
             updateValid()
